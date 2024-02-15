@@ -7,30 +7,11 @@ date: "2024-02-14"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+```
 
-# Define some helper functions for matrix operations and activation functions
-# These are equivalent to the numpy functions used in the Python code
-matrix_mult <- function(x, y) {
-  # Matrix multiplication using %*%
-  x %*% y
-}
+```{r}
 
-matrix_add <- function(x, y) {
-  # Element-wise matrix addition using +
-  x + y
-}
-
-matrix_sub <- function(x, y) {
-  # Element-wise matrix subtraction using -
-  print(x)
-  print(y)
-  x - y
-}
-
-matrix_transpose <- function(x) {
-  # Matrix transpose using t()
-  t(x)
-}
+knitr::opts_chunk$set(echo = TRUE)
 
 relu <- function(x) {
   # Rectified linear unit activation function
@@ -57,40 +38,35 @@ one_hot_encode <- function(x) {
   mat
 }
 
-# Define the NeuralNet class in R using the R6 package
-library(R6)
 
-NeuralNet <- R6Class("NeuralNet",
-  public = list(
-    params = NULL,
-    
     # Initialize the parameters with random values
-    initialize = function(n_hidden, n_features = 2, n_class = 2) {
-      self$params <- list(
+initialize <- function(n_hidden, n_features = 2, n_class = 2) {
+      return(list(
         W1 = matrix(rnorm(n_features * n_hidden), nrow = n_features, ncol = n_hidden),
         b1 = rnorm(n_hidden),
         W2 = matrix(rnorm(n_hidden * n_class), nrow = n_hidden, ncol = n_class),
         b2 = rnorm(n_class)
-      )
-    },
+      ))
+}
+
     
-    # Forward pass of the neural network
-    forward = function(input_data) {
-      W1 <- self$params$W1
-      W2 <- self$params$W2
-      b1 <- self$params$b1
-      b2 <- self$params$b2
+    # forwardPropogate pass of the neural network
+forwardPropogate <-  function( input_data,params) {
+      W1 <- params$W1
+      W2 <- params$W2
+      b1 <- params$b1
+      b2 <- params$b2
       
-      a1 <- matrix_add(matrix_mult(input_data, W1), b1)
-      self$params$z1 <- relu(a1)
-      a2 <- matrix_add(matrix_mult(self$params$z1, W2), b2)
-      self$params$z2 <- softmax(a2)
+      a1 <-  (input_data %*% W1) + b1
+      params$z1 <- relu(a1)
+      a2 <- (params$z1 %*% W2) + b2
+      params$z2 <- softmax(a2)
       
-      return(list(self$params$z1, self$params$z2))
-    },
+      return(list(params$z1, params$z2))
+    }
     
     # Fit the neural network to the input data and labels
-    fit = function(input_data, label, batch_size, iter_num) {
+  fit = function(input_data, label, batch_size, iter_num, params) {
       for (epoch in 1:iter_num) {
         p <- sample(1:length(label))
         input_data <- input_data[p, ]
@@ -98,55 +74,54 @@ NeuralNet <- R6Class("NeuralNet",
         for (i in seq(1, length(label), by = batch_size)) {
           batch_data <- input_data[i:(i + batch_size - 1), ]
           batch_label <- label[i:(i + batch_size - 1)]
-          self$sgd(batch_data, batch_label)
+          params <- sgd(batch_data, batch_label, params)
         }
       }
-    },
+    return(params)
+    }
     
     # Stochastic gradient descent update of the parameters
-    sgd = function(data, label, alpha = 1e-4) {
-      grad <- self$backward(data, label)
+    sgd <- function(data, label, params, alpha = 1e-4) {
+      grad <- backward(data, label, params)
       for (layer in names(grad)) {
-        self$params[[layer]] <- matrix_add(self$params[[layer]], alpha * grad[[layer]])
+        params[[layer]] <- params[[layer]] + (alpha * grad[[layer]])
       }
-    },
+      return(params)
+    }
     
     # Backward pass of the neural network
-    backward = function(data, label) {
-      W1 <- self$params$W1
-      W2 <- self$params$W2
-      b1 <- self$params$b1
-      b2 <- self$params$b2
-      z1 <- self$forward(data)[[1]]
-      z2 <- self$forward(data)[[2]]
+  backward <- function(data, label, params) {
+      W1 <- params$W1
+      W2 <- params$W2
+      b1 <- params$b1
+      b2 <- params$b2
+      z1 <- forwardPropogate(data, params)[[1]]
+      z2 <- forwardPropogate(data, params)[[2]]
       
-      label <- one_hot_encode(label)
-      db2_temp <- matrix_sub(label, z2)
+      #label <- one_hot_encode(label)
+      db2_temp <- label - z2
       db2 <- colSums(db2_temp)
-      dW2 <- matrix_mult(matrix_transpose(z1), db2_temp)
-      db1_temp <- matrix_mult(db2_temp, matrix_transpose(W2))
+      dW2 <- t(z1) %*% db2_temp
+      db1_temp <- db2_temp %*% t(W2)
       db1_temp[z1 <= 0] <- 0
       db1 <- colSums(db1_temp)
-      dW1 <- matrix_mult(matrix_transpose(data), db1_temp)
+      dW1 <- t(data) %*% db1_temp
       
       return(list(W1 = dW1, b1 = db1, W2 = dW2, b2 = db2))
-    },
+    }
     
     # Test the accuracy of the neural network on the test data and labels
-    test = function(train_data, train_label, test_data, test_label, batch_size, iter_num) {
-      self$fit(train_data, train_label, batch_size = batch_size, iter_num = iter_num)
-      pred_label <- self$forward(test_data)[[2]]
+  test = function(train_data, train_label, test_data, test_label, batch_size, iter_num, params) {
+      pred_label <- forwardPropogate(test_data, params)[[2]]
       pred_label <- apply(pred_label, 1, which.max)
       acc <- mean(pred_label == test_label)
       return(acc)
     }
-  )
-)
+  
 
 
-```
 
-```{r}
+
 set.seed(123)
 n_train <- 100
 n_test <- 20
@@ -158,13 +133,13 @@ test_data <- matrix(rnorm(n_test * n_features), nrow = n_test, ncol = n_features
 test_label <- sample(1:n_class, n_test, replace = TRUE)
 
 # Instantiate the NeuralNet class with 10 hidden units
-nn <- NeuralNet$new(n_hidden = 10)
+nn <- initialize(n_hidden = 10)
 
 # Train the neural network with batch size of 10 and 50 iterations
-nn$fit(train_data, train_label, batch_size = 10, iter_num = 50)
+nn <- fit(train_data, train_label, batch_size = 10, iter_num = 250, nn)
 
 # Test the accuracy of the neural network on the test data
-acc <- nn$test(train_data, train_label, test_data, test_label, batch_size = 10, iter_num = 50)
+acc <- test(train_data, train_label, test_data, test_label, batch_size = 10, iter_num = 50, nn)
 cat("Accuracy:", acc, "\n")
 ```
 
