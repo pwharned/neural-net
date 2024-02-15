@@ -1,0 +1,3 @@
+/home/pat/Projects/personalProjects/neural-net/build/CMakeFiles/rebuild_cache.dir
+/home/pat/Projects/personalProjects/neural-net/build/CMakeFiles/app.dir
+/home/pat/Projects/personalProjects/neural-net/build/CMakeFiles/edit_cache.dir
