@@ -32,3 +32,4 @@
 *.app
 .Rproj.user
 *.Rproj
+/build
