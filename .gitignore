@@ -34,3 +34,4 @@
 *.Rproj
 /build
 .Rhistory
+*.csv
