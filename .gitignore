@@ -33,3 +33,4 @@
 .Rproj.user
 *.Rproj
 /build
+.Rhistory

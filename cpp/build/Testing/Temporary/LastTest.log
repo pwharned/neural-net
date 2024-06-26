@@ -1,0 +1,22 @@
+Start testing: Jun 26 05:44 EDT
+----------------------------------------------------------
+1/1 Testing: MyTest
+1/1 Test: MyTest
+Command: "/home/pat/Projects/personalProjects/neural-net/cpp/build/tests"
+Directory: /home/pat/Projects/personalProjects/neural-net/cpp/build
+"MyTest" start time: Jun 26 05:44 EDT
+Output:
+----------------------------------------------------------
+6 -- + -- 2 -- 4 -- Test Addition passed
+Test Subtraction passed
+Test multiplication passed
+Test division passed
+<end of output>
+Test time =   0.00 sec
+----------------------------------------------------------
+Test Passed.
+"MyTest" end time: Jun 26 05:44 EDT
+"MyTest" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jun 26 05:44 EDT
