@@ -35,3 +35,8 @@
 /build
 .Rhistory
 *.csv
+build/
+cpp/build/
+build
+**/build/
+**/build

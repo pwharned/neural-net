@@ -4,6 +4,8 @@ project(minigradcpp)
 enable_testing()
 
 
+
+
 set( SOURCE_PATH "${PROJECT_SOURCE_DIR}/src" )
 set( INCLUDE_PATH "${PROJECT_SOURCE_DIR}/include" )
 
@@ -18,4 +20,6 @@ add_executable(tests ${TPPS} ${HPPS})
 add_test(NAME MyTest COMMAND tests)
 
 add_executable(main ${CPPS} ${HPPS} )
+
+
 
