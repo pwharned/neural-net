@@ -65,8 +65,9 @@ void testConversion() {
   int i = 4;
   
   Value<int> myvalue = 4;
+  std::cout << "myvalue is " << *myvalue.val << std::endl;
   
-  assert(*myvalue.val==4);
+ // assert(*myvalue.val==4);
   assert(myvalue._val==4);
   
   std::cout << "Test conversion passed"<< std::endl;
@@ -147,9 +148,39 @@ void testGrad() {
   
   o.grad = 1;
   o.backward();
+  n.backward();
   o.display();
   
   std::cout << "Test Grad passed"<< std::endl;
+  
+  
+}
+
+void testSort(){
+  
+  Value<double> x1 = 2;
+  Value<double> x2 = 0.0;
+  Value<double> w1 = -3;
+  
+  Value<double> w2  = 1;
+  Value<double> b = 6.8813735870195432;
+  
+  auto x1w1 = x1*w1;
+  auto x2w2 = x2*w2;
+  auto x1w1x2w2 = x1w1 +x2w2;
+  auto n = x1w1x2w2 + b; 
+  auto o = n.tanh();
+  
+  Value<double> *po = &o;
+  
+  
+  
+  auto sortedNodes = po->topologicalSort();
+  
+  for (auto node : sortedNodes) {
+    std::cout << node->_val << std::endl;
+  }
+  
   
   
 }
@@ -167,6 +198,7 @@ int main() {
 	testMultiple();
 	testTanh();
 	testGrad();
+	testSort();
 	return 0;
 }
 

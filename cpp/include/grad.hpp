@@ -1,6 +1,9 @@
 #include <iostream>
 #include <cmath>       /* tanh, log */
 #include <functional>
+#include <vector>
+
+
 using namespace std;
 template <class T, class U = T>
 class Value
@@ -12,7 +15,7 @@ public:
   T* val;
   T _val;
   char op;
-  static double grad;
+  double grad;
   std::function<void()> b;
   
   Value(): val(nullptr), rprev(nullptr), lprev(nullptr), op(0)
@@ -182,7 +185,7 @@ public:
     Value<T, U> result =  Value(&v, v, lprev, lprev, 't');
 
   
-    auto greet = [&result] () {
+    auto greet = [this,&result] () {
       grad  = 1- pow(result._val, 2.0) * result.grad;
     };
     
@@ -191,6 +194,27 @@ public:
 
     return result;
   }
+  
+  std::vector<Value*> topologicalSort() {
+    std::vector<Value*> sortedNodes;
+    topologicalSortHelper(this, sortedNodes);
+    return sortedNodes;
+  }
+  
+  void topologicalSortHelper(Value* node, std::vector<Value*>& sortedNodes) {
+    if (node == nullptr) return;
+    
+    topologicalSortHelper(node->lprev, sortedNodes);
+    topologicalSortHelper(node->rprev, sortedNodes);
+    
+    sortedNodes.push_back(node);
+  }
+
+
+
+
+
+
 
   
   int print() const
@@ -212,12 +236,20 @@ public:
     
   }
   
+private:
+  void topologicalSortHelper(Value& node, std::vector<Value<T,U>>& sortedNodes) {
+    if (node == nullptr) return;
+    
+    topologicalSortHelper(node->lprev, sortedNodes);
+    topologicalSortHelper(node->rprev, sortedNodes);
+    
+    sortedNodes.push_back(node);
+  }
+  
   
 };
 
-// Define and initialize the static member outside the class
-template <typename T, typename U>
-double Value<T, U>::grad = 0;
+
 
 
 
