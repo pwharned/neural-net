@@ -115,11 +115,16 @@ void testTanh() {
 
   Value<double> f= -3;
   Value<double> L = d*f;
+
+
+  Value<double> t = tanh(L);
   
-
-  Value<double> t = L.tanh();
-
-
+  cout << "created T " << t._val << endl; 
+  cout << "left hand of T " << t.lprev << endl; 
+  bool ex =  t.rprev == nullptr;
+  cout << "is null " << ex << endl;
+  cout << "right hand of T " << t.rprev << endl; 
+  
   t.display();
 
   std::cout << "Test Tanh passed"<< std::endl;
@@ -144,7 +149,7 @@ void testGrad() {
   auto x2w2 = x2*w2;
   auto x1w1x2w2 = x1w1 +x2w2;
   auto n = x1w1x2w2 + b; 
-  auto o = n.tanh();
+  auto o = tanh(n);
   
   o.grad = 1;
   o.backward();
@@ -169,21 +174,84 @@ void testSort(){
   auto x2w2 = x2*w2;
   auto x1w1x2w2 = x1w1 +x2w2;
   auto n = x1w1x2w2 + b; 
-  auto o = n.tanh();
+  auto o = tanh(n);
   
   Value<double> *po = &o;
   
   
   
   auto sortedNodes = po->topologicalSort();
-  
-  for (auto node : sortedNodes) {
-    std::cout << node->_val << std::endl;
-  }
+
   
   
   
 }
+
+void testBackwardPropogate(){
+
+  Value<double> x1 = 2;
+  Value<double> x2 = 0.0;
+  Value<double> w1 = -3;
+  
+  Value<double> w2  = 1;
+  Value<double> b = 6.8813735870195432;
+  
+  auto x1w1 = x1*w1;
+  auto x2w2 = x2*w2;
+  auto x1w1x2w2 = x1w1 +x2w2;
+  auto n = x1w1x2w2 + b; 
+
+  auto o = tanh(n);
+  
+  
+  
+/*
+  o.setGrad();
+  o.backward();
+  n.backward();
+  x1w1x2w2.backward();
+  x2w2.backward();
+  x1w1.backward();
+  
+  o.setGrad();
+*/
+  // Call backward on the output node
+ // o.backward();
+  
+  // Call backwardPropagate on the output node
+  //backwardPropagate(&o);
+  
+  // Get the nodes in topological order
+  auto nodes = o.topologicalSort();
+
+  cout << nodes[nodes.size()-1] << endl;
+  cout << &o << endl;
+  
+  assert(nodes[nodes.size()-1] == &o);
+  
+  // Call backward on each node in topological order
+
+  
+  o.backwardPropogate();
+  
+
+
+  o.display();
+
+  
+}
+
+void testSame(){
+  
+  Value<double> a = 3;
+  auto b = a + a;
+  b.setGrad();
+  b.backward();
+  b.display();
+  
+
+}
+
 
 
 
@@ -199,6 +267,8 @@ int main() {
 	testTanh();
 	testGrad();
 	testSort();
+	testBackwardPropogate();
+	testSame();
 	return 0;
 }
 
