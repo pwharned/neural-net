@@ -1,274 +1,104 @@
-// main.cpp
-#include <iostream>
 #include "../include/grad.hpp"
-#include <cassert>
-#include <math.h>
-void testAddition() {
-	
-	Value<int> a = 4;
-  
-	Value<int> b = 2;
-	Value<int> c = a + b;
-	c.display();
-	
-	//assert(c._val==6);
-	
-	std::cout << "Test Addition passed"<< std::endl;
-
-
-}
-
-void testSubtraction() {
-	
-	Value<int> a = 4;
-  
-  Value<int> b = 2;
-  Value<int> c = a - b;
-  c.display();
-
-  assert(c._val==2);
-	std::cout << "Test Subtraction passed"<< std::endl;
-	
-}
-
-void testMultiplication() {
-
-  Value<int> a = 4;
-  
-  Value<int> b = 2;
-  Value<int> c = a * b;
-  
-  c.display();
-  
-  assert(c._val==8);
-  std::cout << "Test Multiplication passed"<< std::endl;
-  
-
-}
-
-void testDivision() {
-	
-	Value<int> a = 4;
-  
-  Value<int> b = 2;
-  Value<int> c = a / b;
-  c.display();
-  
-  assert(c._val==2);
-  std::cout << "Test Division passed"<< std::endl;
-}
-
-
-void testConversion() {
-  
-  
-  int i = 4;
-  
-  Value<int> myvalue = 4;
-  std::cout << "myvalue is " << *myvalue.val << std::endl;
-  
- // assert(*myvalue.val==4);
-  assert(myvalue._val==4);
-  
-  std::cout << "Test conversion passed"<< std::endl;
-  
-}
-
-
-void testMultiple() {
-  
-  
-
-  Value<int> a = 2;
-  Value<int> b = -3;
-  Value<int> c = 10;
-  
-  Value<int> e  = a * b;
-  Value<int> d = e+c;
-  Value<int> f= -2;
-  auto L = d*f;
-  
-
-  L.display();
-  
-
-  
-  
-
-  
-  std::cout << "Test Multiple passed"<< std::endl;
-  
-}
-
-void testTanh() {
-  
-  
-
-
-  Value<double> a = 2;
-  Value<double> b = -3.2;
-  Value<double> c = 10.5;
-  
-  Value<double> e  = a * b;
-  Value<double> d = e+c;
-  
-
-  Value<double> f= -3;
-  Value<double> L = d*f;
-
-
-  Value<double> t = tanh(L);
-  
-  cout << "created T " << t._val << endl; 
-  cout << "left hand of T " << t.lprev << endl; 
-  bool ex =  t.rprev == nullptr;
-  cout << "is null " << ex << endl;
-  cout << "right hand of T " << t.rprev << endl; 
-  
-  t.display();
-
-  std::cout << "Test Tanh passed"<< std::endl;
-  
-
-  
-}
-
-void testGrad() {
-  
-  
-  
-  
-  Value<double> x1 = 2;
-  Value<double> x2 = 0.0;
-  Value<double> w1 = -3;
-  
-  Value<double> w2  = 1;
-  Value<double> b = 6.8813735870195432;
-  
-  auto x1w1 = x1*w1;
-  auto x2w2 = x2*w2;
-  auto x1w1x2w2 = x1w1 +x2w2;
-  auto n = x1w1x2w2 + b; 
-  auto o = tanh(n);
-  
-  o.grad = 1;
-  o.backward();
-  n.backward();
-  o.display();
-  
-  std::cout << "Test Grad passed"<< std::endl;
-  
-  
-}
-
-void testSort(){
-  
-  Value<double> x1 = 2;
-  Value<double> x2 = 0.0;
-  Value<double> w1 = -3;
-  
-  Value<double> w2  = 1;
-  Value<double> b = 6.8813735870195432;
-  
-  auto x1w1 = x1*w1;
-  auto x2w2 = x2*w2;
-  auto x1w1x2w2 = x1w1 +x2w2;
-  auto n = x1w1x2w2 + b; 
-  auto o = tanh(n);
-  
-  Value<double> *po = &o;
-  
-  
-  
-  auto sortedNodes = po->topologicalSort();
-
-  
-  
-  
-}
-
-void testBackwardPropogate(){
-
-  Value<double> x1 = 2;
-  Value<double> x2 = 0.0;
-  Value<double> w1 = -3;
-  
-  Value<double> w2  = 1;
-  Value<double> b = 6.8813735870195432;
-  
-  auto x1w1 = x1*w1;
-  auto x2w2 = x2*w2;
-  auto x1w1x2w2 = x1w1 +x2w2;
-  auto n = x1w1x2w2 + b; 
-
-  auto o = tanh(n);
-  
-  
-  
-/*
-  o.setGrad();
-  o.backward();
-  n.backward();
-  x1w1x2w2.backward();
-  x2w2.backward();
-  x1w1.backward();
-  
-  o.setGrad();
-*/
-  // Call backward on the output node
- // o.backward();
-  
-  // Call backwardPropagate on the output node
-  //backwardPropagate(&o);
-  
-  // Get the nodes in topological order
-  auto nodes = o.topologicalSort();
-
-  cout << nodes[nodes.size()-1] << endl;
-  cout << &o << endl;
-  
-  assert(nodes[nodes.size()-1] == &o);
-  
-  // Call backward on each node in topological order
-
-  
-  o.backwardPropogate();
-  
-
-
-  o.display();
-
-  
-}
-
-void testSame(){
-  
-  Value<double> a = 3;
-  auto b = a + a;
-  b.setGrad();
-  b.backward();
-  b.display();
-  
-
-}
-
-
-
-
+#include "../include/neuron.hpp"
+#include "assert.h"
+#include "cmath"
+using namespace std;
 int main() {
-	
+  Value<double> a = 1;
 
-	testAddition();
-	testSubtraction();
-	testMultiplication();
-	testDivision();
-	testConversion();
-	testMultiple();
-	testTanh();
-	testGrad();
-	testSort();
-	testBackwardPropogate();
-	testSame();
-	return 0;
+  std::cout << "test that the wrapped value is correct" << std::endl;
+  assert(a.get() == 1);
+
+  auto b = a + a;
+
+  assert(b.get() == 2);
+
+  auto c = a * a;
+
+  assert(c.get() == 1);
+
+  auto d = a * b + c;
+
+  assert(d.get() == 3);
+
+  auto e = d + 1;
+
+  assert(e.get() == 4);
+
+  auto g = e - 1;
+
+  assert(g.get() == 3);
+
+  auto f = g ^ g;
+
+  std::cout << f.get() << std::endl;
+
+  assert(f.get() == 27);
+
+  auto h = f - 9;
+
+  assert(h.get() == 18);
+  assert(h.op() == '-');
+
+  auto i = h / 2;
+
+  assert(i.get() == 9);
+
+  auto j = i * -1;
+
+  assert(j.get() == -9);
+
+  assert(relu(j).get() == 0);
+
+  // j.backwardPropogate();
+
+  cout << j.grad() << endl;
+  cout << a.grad() << endl;
+
+  Value<double> k = 1;
+  Value<double> l = 3;
+  auto m = k * l;
+
+  // k.backwardPropogate();
+  assert(k.rprev == nullptr);
+  // l.backwardPropogate();
+
+  cout << m.grad() << endl;
+
+  Value<double> x1 = 2;
+  Value<double> x2 = 0.0;
+  Value<double> w1 = -3;
+
+  Value<double> w2 = 1;
+  Value<double> b1 = 6.8813735870195432;
+
+  auto x1w1 = x1 * w1;
+  auto x2w2 = x2 * w2;
+  auto x1w1x2w2 = x1w1 + x2w2;
+  auto n = x1w1x2w2 + b1;
+  auto o = tanh(n);
+
+  o.backwardPropogate();
+  n.print();
+  x1w1x2w2.print();
+
+  o.display();
+
+  auto nn = Layer(2, 3);
+
+  std::vector<Value<double>> myVector = {Value<double>(4.0), Value<double>(4.0),
+                                         Value<double>(1.0)};
+  std::vector<int> myVector2 = {4, 4, 1};
+
+  nn.call(myVector);
+
+  std::vector<double> data = {2.0, 3.0, -1.0};
+  auto mlp = MLP(3, myVector2);
+
+  mlp.layers[0].call(data);
+  mlp.layers[1].call(mlp.layers[0].out);
+  cout << mlp.layers.size() << endl;
+  mlp.layers[2].call(mlp.layers[1].out);
+  mlp.call(data);
+  return 0;
 }
-
