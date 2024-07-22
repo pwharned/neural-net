@@ -78,27 +78,39 @@ int main() {
   auto n = x1w1x2w2 + b1;
   auto o = tanh(n);
 
-  o.backwardPropogate();
-  n.print();
-  x1w1x2w2.print();
+  o += (n * n);
+  cout << "testing left hand assignation" << endl;
 
   o.display();
-
-  auto nn = Layer(2, 3);
+  cout << "test passed" << endl;
+  o.backwardPropogate();
+  o.display();
 
   std::vector<Value<double>> myVector = {Value<double>(4.0), Value<double>(4.0),
                                          Value<double>(1.0)};
   std::vector<int> myVector2 = {4, 4, 1};
+  std::vector<double> data = {2.0, 3.0, -1.0};
 
+  auto nn = Layer(2, 3);
+
+  auto neuron = Neuron(3);
+  neuron.call(data);
+  neuron.out.print();
+  cout << "called the neuron" << endl;
+  neuron.out.backwardPropogate();
+  cout << "propogated through " << endl;
+
+  neuron.out.display();
   nn.call(myVector);
 
-  std::vector<double> data = {2.0, 3.0, -1.0};
   auto mlp = MLP(3, myVector2);
 
-  mlp.layers[0].call(data);
-  mlp.layers[1].call(mlp.layers[0].out);
-  cout << mlp.layers.size() << endl;
-  mlp.layers[2].call(mlp.layers[1].out);
-  mlp.call(data);
+  mlp.layers[0].neurons[0].w[0].print();
+
+  auto out = mlp.call(data);
+  // out[0].rprev->print();
+
+  // mlp.layers[0].neurons[0].w[0].print();
+
   return 0;
 }

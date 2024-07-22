@@ -66,8 +66,7 @@ class Value {
     return v;
   }
   friend auto operator+=(const Value& lhs, const Value& rhs) -> Value {
-    lhs.val = lhs.val + rhs.val;
-    return lhs;
+    return lhs + rhs;
   }
   friend Value tanh(Value& lhs) {
     auto result =
@@ -126,7 +125,6 @@ class Value {
   void backwardPropogate() {
     setGrad();
     auto nodes = topologicalSort();
-
     // Call backward on each node in topological order
     for (int i = nodes.size() - 1; i >= 0; --i) {
       nodes[i]->backward();

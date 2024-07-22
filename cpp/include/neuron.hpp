@@ -7,7 +7,7 @@
 
 class Neuron {
  public:
-  Neuron(int nin) {
+  Neuron(int nin) : out(Value<double>(0.0)) {
     w = std::vector<Value<double>>(nin, 0);
     srand(time(NULL));
     zero_grad();
@@ -22,22 +22,23 @@ class Neuron {
 
   Value<double> call(std::vector<double> x) {
     // need to implement a check to assure dimensions are the same
-    Value<double> out = 0;
     for (int i = 0; i < w.size(); i++) {
       out += (w[i] * x[i]);
     }
-    return b + out;
+    out += b;
+    return out;
   }
   Value<double> call(std::vector<Value<double>> x) {
     // need to implement a check to assure dimensions are the same
-    Value<double> out = 0;
     for (int i = 0; i < w.size(); i++) {
-      out += (w[i] * x[i]);
+      auto j = (w[i] * x[i]);
+      out += j;
     }
+    out += b;
 
-    return b + out;
+    return out;
   }
-
+  mutable Value<double> out;
   mutable vector<Value<double>> w;
   mutable Value<double> b = Value<double>(0.0);
 };
