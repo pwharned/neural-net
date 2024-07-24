@@ -8,7 +8,7 @@
 class Neuron {
  public:
   Neuron(int nin) : out(Value<double>(0.0)) {
-    w = std::vector<Value<double>>(nin, 0);
+    w = std::vector<Value<double>>(nin, Value<double>(0.0));
     srand(time(NULL));
     zero_grad();
   }
@@ -20,25 +20,28 @@ class Neuron {
     }
   }
 
-  Value<double> call(std::vector<double> x) {
-    // need to implement a check to assure dimensions are the same
+  void print_grad() {
+    for (int i = 0; i < w.size(); i++) {
+      w[i].print();
+    }
+    cout << endl;
+  }
+
+  void call(std::vector<double> x) {
     for (int i = 0; i < w.size(); i++) {
       out += (w[i] * x[i]);
     }
     out += b;
-    return out;
   }
-  Value<double> call(std::vector<Value<double>> x) {
+  void call(std::vector<Value<double>> x) {
     // need to implement a check to assure dimensions are the same
+    // out += b;
     for (int i = 0; i < w.size(); i++) {
-      auto j = (w[i] * x[i]);
-      out += j;
+      out += (w[i] * x[i]);
     }
     out += b;
-
-    return out;
   }
-  mutable Value<double> out;
+  mutable Value<double> out = Value<double>(0.0);
   mutable vector<Value<double>> w;
   mutable Value<double> b = Value<double>(0.0);
 };
@@ -56,12 +59,12 @@ class Layer {
 
   void call(std::vector<double> x) {
     for (int i = 0; i < neurons.size(); i++) {
-      out[i] = neurons[i].call(x);
+      neurons[i].call(x);
     }
   };
   void call(std::vector<Value<double>> x) {
     for (int i = 0; i < neurons.size(); i++) {
-      out[i] = neurons[i].call(x);
+      neurons[i].call(x);
     }
   };
 

@@ -20,6 +20,17 @@ class Value {
   constexpr Value(T value, char o, const Value<T>& l)
       : val(value), operation(o), lprev(&l), rprev(nullptr), gradient(0) {}
 
+  void setLprev(const Value* new_lprev) const {
+    Value* iq = const_cast<Value*>(lprev);
+    iq = const_cast<Value*>(new_lprev);
+  }
+  void setPrev(Value* new_prev) const { prev = new_prev; };
+
+  void setRprev(const Value* new_rprev) {
+    Value* iq = const_cast<Value*>(rprev);
+    iq = const_cast<Value*>(new_rprev);
+  }
+
   friend auto operator+(const Value& lhs, const Value& rhs) -> Value {
     auto v = Value(lhs.val + rhs.val, '+', lhs, rhs);
 
@@ -65,9 +76,22 @@ class Value {
     v.setOp('/');
     return v;
   }
-  friend auto operator+=(const Value& lhs, const Value& rhs) -> Value {
-    return lhs + rhs;
+
+  friend void operator+=(Value& lhs, const Value& rhs) {
+    Value* new_l = new Value(lhs.val, lhs.operation, *lhs.lprev,
+                             *lhs.rprev);  // create a new node
+    // new_v->rprev = &rhs;
+    Value* v = &lhs;
+
+    // Value* new_r = new Value(rhs.val, rhs.operation, lhs, rhs);
+
+    v->lprev = new_l;
+    v->rprev = &rhs;
+    v->operation = '+';
+
+    lhs.val = lhs.val + rhs.val;
   }
+
   friend Value tanh(Value& lhs) {
     auto result =
         Value((exp(lhs.val) - exp(-lhs.val)) / (exp(lhs.val) + exp(-lhs.val)),
@@ -125,31 +149,28 @@ class Value {
   void backwardPropogate() {
     setGrad();
     auto nodes = topologicalSort();
+    cout << "success" << endl;
     // Call backward on each node in topological order
     for (int i = nodes.size() - 1; i >= 0; --i) {
       nodes[i]->backward();
     }
   }
-  const Value* lprev;
-  const Value* rprev;
+  const Value* lprev = nullptr;
+  const Value* rprev = nullptr;
+  Value* prev;
   int print() const {
     string out;
 
     out = " " + std::to_string(val) + " (" + std::to_string(gradient) + ")";
-    if (operation != 0) {
-      if (rprev != nullptr) {
-        out = std::to_string(val) + " (" + std::to_string(gradient) + ")" +
-              " = " + std::to_string(lprev->val) + " (" +
-              std::to_string(lprev->gradient) + ")" + " " + operation + " " +
-              std::to_string(rprev->val) + " (" +
-              std::to_string(rprev->gradient) + ")";
-
-      } else {
-        out = std::to_string(val) + " (" + std::to_string(gradient) + ")" +
-              " = " + std::to_string(lprev->val) + " (" +
-              std::to_string(lprev->gradient) + ")" + " " + operation;
-      }
+    if (lprev != nullptr) {
+      out += (" = " + std::to_string(lprev->val) + " (");
+      out += (std::to_string(lprev->gradient) + ")" + " " + operation + " ");
     }
+    if (rprev != nullptr) {
+      out += std::to_string(rprev->val) + " (";
+      out += std::to_string(rprev->gradient) + ")";
+    }
+
     cout << out;
 
     return out.length();
@@ -187,7 +208,7 @@ class Value {
  private:
   mutable T val;
   mutable double gradient;
-  char operation;
+  char operation = 0;
   void setOp(char o) { operation = o; }
 };
 

@@ -60,7 +60,6 @@ int main() {
   auto m = k * l;
 
   // k.backwardPropogate();
-  assert(k.rprev == nullptr);
   // l.backwardPropogate();
 
   cout << m.grad() << endl;
@@ -78,36 +77,55 @@ int main() {
   auto n = x1w1x2w2 + b1;
   auto o = tanh(n);
 
-  o += (n * n);
   cout << "testing left hand assignation" << endl;
 
-  o.display();
-  cout << "test passed" << endl;
-  o.backwardPropogate();
-  o.display();
+  auto cc = Value<double>(1);
+  auto dd = Value<double>(2);
+  auto aa = Value<double>(3);
+  cc += (dd);
 
+  assert(&cc != cc.lprev);
+  assert(&cc != cc.rprev);
+  assert(cc.rprev != cc.lprev);
+  assert(cc.lprev != nullptr);
+  assert(cc.rprev != nullptr);
+  assert(cc.lprev->lprev == nullptr);
+  assert(cc.lprev->rprev == nullptr);
+  assert(cc.rprev == &dd);
+  auto gg = (dd * aa);
+  cc += gg;
+  cc += gg * 2;
+  // cc.display();
+  // cc.topologicalSort();
+  cout << "completed" << endl;
   std::vector<Value<double>> myVector = {Value<double>(4.0), Value<double>(4.0),
                                          Value<double>(1.0)};
   std::vector<int> myVector2 = {4, 4, 1};
-  std::vector<double> data = {2.0, 3.0, -1.0};
+  std::vector<double> data = {2.0};
 
-  auto nn = Layer(2, 3);
+  // auto nn = Layer(2, 3);
 
-  auto neuron = Neuron(3);
-  neuron.call(data);
-  neuron.out.print();
+  auto neuron = Neuron(1);
+
+  for (int i = 0; i < neuron.w.size(); i++) {
+    neuron.out += (neuron.w[i] * data[i]);
+  }
+  neuron.out += neuron.b;
+  neuron.out.display();
+
   cout << "called the neuron" << endl;
-  neuron.out.backwardPropogate();
+  // neuron.out.backwardPropogate();
   cout << "propogated through " << endl;
 
-  neuron.out.display();
-  nn.call(myVector);
+  auto neuron2 = Neuron(1);
+  neuron2.call(data);
+  neuron2.out.display();
 
-  auto mlp = MLP(3, myVector2);
+  // auto mlp = MLP(3, myVector2);
 
-  mlp.layers[0].neurons[0].w[0].print();
+  // mlp.layers[0].neurons[0].w[0].print();
 
-  auto out = mlp.call(data);
+  // auto out = mlp.call(data);
   // out[0].rprev->print();
 
   // mlp.layers[0].neurons[0].w[0].print();
