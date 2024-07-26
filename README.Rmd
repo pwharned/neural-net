@@ -164,7 +164,7 @@ softmax <- function(x) {
   # Normalizes the input to a probability distribution
   exp_x <- exp(x)
   row_sums <- apply(exp_x, 1, sum)
-  exp_x / row_sums
+  exp_x / (row_sums + .04)
 }
 
 one_hot_encode <- function(x) {
@@ -236,33 +236,28 @@ alpha = 1e-4
 
     # Backward pass of the neural network
   backward <- function(data, label, params) {
-      W1 <- params$W1
-      W2 <- params$W2
-      b1 <- params$b1
-      b2 <- params$b2
-      z1 <- forwardPropogate(data, params)[[1]]
-      z2 <- forwardPropogate(data, params)[[2]]
+      z <- forwardPropogate(batch_data, params)
+
+      z1 <- z[[1]]
+      z2 <- z[[2]]
       
-      db2_temp <- label - z2
-      db2 <- colSums(db2_temp)
-      dW2 <- t(z1) %*% db2_temp
-      db1_temp <- db2_temp %*% t(W2)
+      db2_temp <- batch_label - z2
+      params$b2 <- colSums(db2_temp)
+      params$W2 <- t(z1) %*% db2_temp
+      db1_temp <- db2_temp %*% t(params$W2)
       db1_temp[z1 <= 0] <- 0
-      db1 <- colSums(db1_temp)
-      dW1 <- t(data) %*% db1_temp
+      params$b1 <- colSums(db1_temp)
+      params$W1 <- t(data) %*% db1_temp
       
-      return(list(W1 = dW1, b1 = db1, W2 = dW2, b2 = db2))
+      return(params)
   }
   
   forwardPropogate <-  function( input_data,params) {
-      W1 <- params$W1
-      W2 <- params$W2
-      b1 <- params$b1
-      b2 <- params$b2
+
       
-      a1 <-  (input_data %*% W1) + b1
+      a1 <-  (input_data %*% params$W1) + params$b1
       params$z1 <- relu(a1)
-      a2 <- (params$z1 %*% W2) + b2
+      a2 <- (params$z1 %*% params$W2) + params$b2
       params$z2 <- softmax(a2)
       
       return(list(params$z1, params$z2))
@@ -277,7 +272,7 @@ l <- seq(1, length(y))
 
 
 
-      for (epoch in 1:iter_num) { #Iterate through the requested number of iterations
+      for (epoch in 1:2) { #Iterate through the requested number of iterations
         p <- sample(1:train_dim) # Use sample to generate a random int
         input_data <- train_data[p, ] # select the row
         label <- train_label[p] #select the label
@@ -311,17 +306,14 @@ l <- seq(1, length(y))
 
 
     # Test the accuracy of the neural network on the test data and labels
-  test = function(train_data, train_label, test_data, test_label, params) {
       pred_label <- forwardPropogate(test_data, params)[[2]]
       pred_label <- apply(pred_label, 1, which.max)
       acc <- mean(pred_label == test_label)
-      return(acc)
-    }
+    
   
 
 
 # Test the accuracy of the neural network on the test data
-acc <- test(train_data, train_label, test_data, test_label,params)
 cat("Accuracy:", acc, "\n")
 ```
 

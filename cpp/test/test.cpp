@@ -101,7 +101,7 @@ int main() {
   std::vector<Value<double>> myVector = {Value<double>(4.0), Value<double>(4.0),
                                          Value<double>(1.0)};
   std::vector<int> myVector2 = {4, 4, 1};
-  std::vector<double> data = {2.0};
+  std::vector<Value<double>> data = {Value<double>(2.0)};
 
   // auto nn = Layer(2, 3);
 

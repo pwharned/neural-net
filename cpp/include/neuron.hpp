@@ -29,7 +29,7 @@ class Neuron {
 
   void call(std::vector<double> x) {
     for (int i = 0; i < w.size(); i++) {
-      out += (w[i] * x[i]);
+      out += x[i];
     }
     out += b;
   }
@@ -37,7 +37,8 @@ class Neuron {
     // need to implement a check to assure dimensions are the same
     // out += b;
     for (int i = 0; i < w.size(); i++) {
-      out += (w[i] * x[i]);
+      auto y = (x[i] * w[i]);
+      out += y;
     }
     out += b;
   }
