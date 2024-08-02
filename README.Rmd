@@ -31,8 +31,8 @@ mm <- ncol(data)
 n <- nrow(data)
 
 
-X_train <- data[,2:785] / 255
-Y_train <- data[,1]
+X_train <- data[2:785,] / 255
+Y_train <- data[1,]
 
 # Define functions
 get_predictions <- function(A2) {
@@ -52,9 +52,9 @@ one_hot <- function(Y) {
 
 init_params <- function(n_classes, n_features, n_hidden) {
   W1 <- matrix(runif(n_hidden * n_features) - 0.5, nrow = n_hidden, ncol = n_features)
-  b1 <- matrix(runif(n_hidden) - 0.5, nrow = n_hidden, ncol = 1)
+  b1 <- runif(n_hidden) - 0.5
   W2 <- matrix(runif(n_classes * n_hidden) - 0.5, nrow = n_classes, ncol = n_hidden)
-  b2 <- matrix(runif(n_classes) - 0.5, nrow = n_classes, ncol = 1)
+  b2 <- runif(n_classes) - 0.5
   list(W1, b1, W2, b2)
 }
 
@@ -62,10 +62,11 @@ ReLU <- function(Z) {
   pmax(Z, 0)
 }
 
-softmax <- function(Z) {
-  max_Z <- apply(Z, 1, max)
-  exp_Z <- exp(Z - max_Z)
-  exp_Z / rowSums(exp_Z)
+softmax <- function(Z1) {
+  #max_Z <- apply(Z1, 1, max)
+  #exp_Z <- exp(Z1 - max_Z)
+  exp_Z = exp(Z1)
+  sweep(exp_Z, 2, colSums(exp_Z),  "/")
 }
 
 ReLU_deriv <- function(Z) {
@@ -106,43 +107,45 @@ v <- rep(0, length(c(W1, b1, W2, b2)))
 t <- 0
 
 # Set learning rate and number of iterations
-learning_rate <- 0.001
+learning_rate <- 0.9
 beta1 <- 0.9
 beta2 <- 0.999
 epsilon <- 1e-8
 num_iterations <- 100
-
+ one_hot_y = one_hot(Y_train)
 # Train model
-for (i in 1:num_iterations) {
+for (i in 1:3) {
   # Forward pass
-  Z1 <- W1 %*% X_train + b1
+  Z1 <- (W1 %*% X_train) + b1
   A1 <- ReLU(Z1)
-  Z2 <- W2 %*% A1 + b2
+  Z2 <- (W2 %*% A1) + b2
   A2 <- softmax(Z2)
   
   # Backward pass
-  dZ2 <- A2 - one_hot(Y_train)
-  dW2 <- t(dZ2 %*% t(A1)) / m
-  db2 <- rowSums(dZ2) / m
-  dZ1 <- t(W2) %*% dZ2 * ReLU_deriv(Z1)
-  dW1 <- t(dZ1 %*% t(X_train)) / m
-  db1 <- rowSums(dZ1) / m
+  dZ2 <- A2 - one_hot_y
+  dW2 <- (dZ2 %*% t(A1)) / mm
+  db2 <- sum(dZ2) / mm
+  dZ1 <- (t(W2) %*% dZ2) * ReLU_deriv(Z1)
+  dW1 <- dZ1 %*% t(X_train) / mm
+  db1 <- sum(dZ1) / mm
   
   # Update parameters using Adam optimizer
-  t <- t + 1
-  params <- list(params = c(W1, b1, W2, b2), m = m, v = v)
-  gradients <- c(dW1, db1, dW2, db2)
-  params <- adam_optimizer(params, gradients, learning_rate, beta1, beta2, epsilon, t)
-  W1 <- matrix(params$params[1:n_hidden * n_features], nrow = n_hidden, ncol = n_features)
-  b1 <- matrix(params$params[(n_hidden * n_features + 1):(n_hidden * n_features + n_hidden)], nrow = n_hidden, ncol = 1)
-  W2 <- matrix(params$params[(n_hidden * n_features + n_hidden + 1):(n_hidden * n_features + n_hidden + n_classes * n_hidden)], nrow = n_classes, ncol = n_hidden)
-  b2 <- matrix(params$params[(n_hidden * n_features + n_hidden + n_classes * n_hidden + 1):length(params$params)], nrow = n_classes, ncol = 1)
-  
+  #t <- t + 1
+  #params <- list(params = c(W1, b1, W2, b2), m = m, v = v)
+  #gradients <- c(dW1, db1, dW2, db2)
+  #params <- adam_optimizer(params, gradients, learning_rate, beta1, beta2, epsilon, t)
+  #W1 <- matrix(params$params[1:n_hidden * n_features], nrow = n_hidden, ncol = n_features)
+  #b1 <- matrix(params$params[(n_hidden * n_features + 1):(n_hidden * n_features + n_hidden)], nrow = n_hidden, ncol = 1)
+  #W2 <- matrix(params$params[(n_hidden * n_features + n_hidden + 1):(n_hidden * n_features + n_hidden + n_classes * n_hidden)], nrow = n_classes, ncol = n_hidden)
+  #b2 <- matrix(params$params[(n_hidden * n_features + n_hidden + n_classes * n_hidden + 1):length(params$params)], nrow = n_classes, ncol = 1)
+  W1 <- W1 - ( dW1 * learning_rate  )
+  W2 <- W2 -  (dW2 * learning_rate )
+  b1 <- b1 -  (db1 * learning_rate)
+  b2 <- b2 - (db2 * learning_rate)
   # Print accuracy every 10 iterations
-  if (i %% 10 == 0) {
     predictions <- get_predictions(A2)
     cat("Iteration", i, "accuracy:", get_accuracy(predictions, Y_train), "\n")
-  }
+  
 }
 
 
