@@ -40,3 +40,4 @@ cpp/build/
 build
 **/build/
 **/build
+.ipynb_*

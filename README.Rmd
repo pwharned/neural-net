@@ -9,316 +9,150 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-```{r}
+# Notes on useful papers
 
-knitr::opts_chunk$set(echo = TRUE)
+## Adam
+Modified SGD algorithm intended to address the vanishing gradient problem.
+https://arxiv.org/abs/1412.6980
 
-relu <- function(x) {
-  # Rectified linear unit activation function
-  # Replaces negative values with zero
-  x[x < 0] <- 0
-  x
-}
-
-softmax <- function(x) {
-  # Softmax activation function
-  # Normalizes the input to a probability distribution
-  exp_x <- exp(x)
-  row_sums <- apply(exp_x, 1, sum)
-  exp_x / row_sums
-}
-
-one_hot_encode <- function(x) {
-  # One-hot encoding function
-  # Converts a vector of labels into a matrix of binary indicators
-  n <- length(x)
-  k <- max(x)
-  mat <- matrix(0, nrow = n, ncol = k)
-  mat[cbind(1:n, x)] <- 1
-  mat
-}
-
-
-    # Initialize the parameters with random values
-initialize <- function(n_hidden, n_features = 2, n_class = 2) {
-      return(list(
-        W1 = matrix(rnorm(n_features * n_hidden), nrow = n_features, ncol = n_hidden),
-        b1 = rnorm(n_hidden),
-        W2 = matrix(rnorm(n_hidden * n_class), nrow = n_hidden, ncol = n_class),
-        b2 = rnorm(n_class)
-      ))
-}
-
-    
-    # forwardPropogate pass of the neural network
-forwardPropogate <-  function( input_data,params) {
-      W1 <- params$W1
-      W2 <- params$W2
-      b1 <- params$b1
-      b2 <- params$b2
-      
-      a1 <-  (input_data %*% W1) + b1
-      params$z1 <- relu(a1)
-      a2 <- (params$z1 %*% W2) + b2
-      params$z2 <- softmax(a2)
-      
-      return(list(params$z1, params$z2))
-    }
-    
-    # Fit the neural network to the input data and labels
-  fit = function(input_data, label, batch_size, iter_num, params) {
-      for (epoch in 1:iter_num) { #Iterate through the requested number of iterations
-        p <- sample(1:length(label)) # Use sample to generate a random int
-        input_data <- input_data[p, ] # select the row
-        label <- label[p] #select the label
-        for (i in seq(1, length(label), by = batch_size)) {
-          batch_data <- input_data[i:(i + batch_size - 1), ]
-          batch_label <- label[i:(i + batch_size - 1)]
-          params <- sgd(batch_data, batch_label, params) # We update the params
-        }
-      }
-    return(params)
-    }
-    
-    # Stochastic gradient descent update of the parameters
-    sgd <- function(data, label, params, alpha = 1e-4) {
-      grad <- backward(data, label, params)
-      for (layer in names(grad)) {
-        params[[layer]] <- params[[layer]] + (alpha * grad[[layer]])
-      }
-      return(params)
-    }
-    
-    # Backward pass of the neural network
-  backward <- function(data, label, params) {
-      W1 <- params$W1
-      W2 <- params$W2
-      b1 <- params$b1
-      b2 <- params$b2
-      z1 <- forwardPropogate(data, params)[[1]]
-      z2 <- forwardPropogate(data, params)[[2]]
-      
-      #label <- one_hot_encode(label)
-      db2_temp <- label - z2
-      db2 <- colSums(db2_temp)
-      dW2 <- t(z1) %*% db2_temp
-      db1_temp <- db2_temp %*% t(W2)
-      db1_temp[z1 <= 0] <- 0
-      db1 <- colSums(db1_temp)
-      dW1 <- t(data) %*% db1_temp
-      
-      return(list(W1 = dW1, b1 = db1, W2 = dW2, b2 = db2))
-    }
-    
-    # Test the accuracy of the neural network on the test data and labels
-  test = function(train_data, train_label, test_data, test_label, batch_size, iter_num, params) {
-      pred_label <- forwardPropogate(test_data, params)[[2]]
-      pred_label <- apply(pred_label, 1, which.max)
-      acc <- mean(pred_label == test_label)
-      return(acc)
-    }
-  
-
-
-
-
-set.seed(123)
-n_train <- 100
-n_test <- 20
-n_features <- 2
-n_class <- 2
-train_data <- matrix(rnorm(n_train * n_features), nrow = n_train, ncol = n_features)
-train_label <- sample(1:n_class, n_train, replace = TRUE)
-test_data <- matrix(rnorm(n_test * n_features), nrow = n_test, ncol = n_features)
-test_label <- sample(1:n_class, n_test, replace = TRUE)
-
-# Instantiate the NeuralNet class with 10 hidden units
-nn <- initialize(n_hidden = 10)
-
-# Train the neural network with batch size of 10 and 50 iterations
-nn <- fit(train_data, train_label, batch_size = 10, iter_num = 1, nn)
-
-# Test the accuracy of the neural network on the test data
-acc <- test(train_data, train_label, test_data, test_label, batch_size = 10, iter_num = 50, nn)
-cat("Accuracy:", acc, "\n")
-```
 
 
 ```{r}
 
-knitr::opts_chunk$set(echo = TRUE)
 
-# The neural network so to speak is just weights and biases
-set.seed(123)
+# Load data
+data <- read.csv("python/mnist_train.csv")
+
+# Convert data to matrix
+data <- t(as.matrix(data))
+
+# Get dimensions of data
+mm <- ncol(data)
+n <- nrow(data)
 
 
-relu <- function(x) {
-  # Rectified linear unit activation function
-  # Replaces negative values with zero
-  x[x < 0] <- 0
-  x
+X_train <- data[,2:785] / 255
+Y_train <- data[,1]
+
+# Define functions
+get_predictions <- function(A2) {
+  apply(A2, 2, which.max)
 }
 
-softmax <- function(x) {
-  # Softmax activation function
-  # Normalizes the input to a probability distribution
-  exp_x <- exp(x)
-  row_sums <- apply(exp_x, 1, sum)
-  exp_x / (row_sums + .04)
+get_accuracy <- function(predictions, Y) {
+  mean(predictions == Y)
 }
 
-one_hot_encode <- function(x) {
-  # One-hot encoding function
-  # Converts a vector of labels into a matrix of binary indicators
-  n <- length(x)
-  #k <- max(x)
-  k <- length(unique(x))
-  mat <- matrix(0, nrow = n, ncol = k)
-  mat[cbind(1:n, x)] <- 1
-  mat
+one_hot <- function(Y) {
+  n_classes <- max(Y) + 1
+  one_hot_Y <- matrix(0, nrow = n_classes, ncol = length(Y))
+  one_hot_Y[cbind(Y + 1, seq_along(Y))] <- 1
+  one_hot_Y
 }
 
-one_hot_encode <- function(x) {
-  # One-hot encoding function
-  # Converts a vector of string labels into a matrix of binary indicators
-  n <- length(x)
-  k <- length(unique(x))
-  labels <- unique(x)
-  mat <- matrix(0, nrow = n, ncol = k)
-  for (i in 1:n) {
-    j <- which(labels == x[i])
-    mat[i, j] <- 1
-  }
-  mat
+init_params <- function(n_classes, n_features, n_hidden) {
+  W1 <- matrix(runif(n_hidden * n_features) - 0.5, nrow = n_hidden, ncol = n_features)
+  b1 <- matrix(runif(n_hidden) - 0.5, nrow = n_hidden, ncol = 1)
+  W2 <- matrix(runif(n_classes * n_hidden) - 0.5, nrow = n_classes, ncol = n_hidden)
+  b2 <- matrix(runif(n_classes) - 0.5, nrow = n_classes, ncol = 1)
+  list(W1, b1, W2, b2)
 }
 
-
-string_to_int <- function(x) {
-  unique_strings <- unique(x)
-  int_values <- seq_along(unique_strings)
-  x_int <- int_values[match(x, unique_strings)]
-  return(x_int)
+ReLU <- function(Z) {
+  pmax(Z, 0)
 }
 
+softmax <- function(Z) {
+  max_Z <- apply(Z, 1, max)
+  exp_Z <- exp(Z - max_Z)
+  exp_Z / rowSums(exp_Z)
+}
 
+ReLU_deriv <- function(Z) {
+  Z > 0
+}
 
-n_train <- 100
-n_test <- 20
-n_features <- 4
-n_class <- 3
-
-## generate a random ordering
-set.seed(1) ## make reproducible here, but not if generating many random samples
-rand <- sample(nrow(iris))
-rand
-d <- iris[rand,]
-train_data <- as.matrix(d[0:75,0:4])
-
-train_label <- one_hot_encode(as.matrix(d[0:75,5:5]))
-
-
-test_data <- as.matrix(d[75:150,0:4])
-
-test_label <- one_hot_encode(as.matrix(d[75:150,5:5]))
-
-n_hidden = 10 
-
-params = list(
-        W1 = matrix(rnorm(n_features * n_hidden), nrow = n_features, ncol = n_hidden),
-        b1 = rnorm(n_hidden),
-        W2 = matrix(rnorm(n_hidden * n_class), nrow = n_hidden, ncol = n_class),
-        b2 = rnorm(n_class)
-      )
-
-iter_num = 10
-batch_size = 10
-alpha = 1e-4
-
-    # Backward pass of the neural network
-  backward <- function(data, label, params) {
-      z <- forwardPropogate(batch_data, params)
-
-      z1 <- z[[1]]
-      z2 <- z[[2]]
-      
-      db2_temp <- batch_label - z2
-      params$b2 <- colSums(db2_temp)
-      params$W2 <- t(z1) %*% db2_temp
-      db1_temp <- db2_temp %*% t(params$W2)
-      db1_temp[z1 <= 0] <- 0
-      params$b1 <- colSums(db1_temp)
-      params$W1 <- t(data) %*% db1_temp
-      
-      return(params)
+adam_optimizer <- function(params, gradients, learning_rate, beta1, beta2, epsilon, t) {
+  m <- params$m
+  v <- params$v
+  
+  for (i in 1:length(gradients)) {
+    m[i] <- beta1 * m[i] + (1 - beta1) * gradients[i]
+    v[i] <- beta2 * v[i] + (1 - beta2) * gradients[i]^2
+    m_hat <- m[i] / (1 - beta1^t)
+    v_hat <- v[i] / (1 - beta2^t)
+    params$params[i] <- params$params[i] - learning_rate * m_hat / (sqrt(v_hat) + epsilon)
   }
   
-  forwardPropogate <-  function( input_data,params) {
-
-      
-      a1 <-  (input_data %*% params$W1) + params$b1
-      params$z1 <- relu(a1)
-      a2 <- (params$z1 %*% params$W2) + params$b2
-      params$z2 <- softmax(a2)
-      
-      return(list(params$z1, params$z2))
-    }
-    
-  train_dim <- dim(train_label)[1]
-
-s <- seq(1, train_dim, by = batch_size)
-
-y <- pmin(s+batch_size, train_dim)
-l <- seq(1, length(y))
-
-
-
-      for (epoch in 1:2) { #Iterate through the requested number of iterations
-        p <- sample(1:train_dim) # Use sample to generate a random int
-        input_data <- train_data[p, ] # select the row
-        label <- train_label[p] #select the label
-        for (k in l) {
-          i <- s[k]
-          j <- y[k]
-
-          batch_data <- train_data[i:j, ]
-          
-          batch_label <- train_label[i:j]
-          
-           #   sgd <- function(data, label, params, alpha = 1e-4) {
-          
-      grad <- backward(batch_data, batch_label, params)
-      
-      
-      
-      for (layer in names(grad)) {
-        params[[layer]] <- params[[layer]] + (alpha * grad[[layer]])
-      }
-   
-          
-         # params <- sgd(batch_data, batch_label, params) # We update the params
-        }
-      
-        }
-
-
-
-
-
-
-    # Test the accuracy of the neural network on the test data and labels
-      pred_label <- forwardPropogate(test_data, params)[[2]]
-      pred_label <- apply(pred_label, 1, which.max)
-      acc <- mean(pred_label == test_label)
-    
+  params$m <- m
+  params$v <- v
   
+  return(params)
+}
+
+# Initialize parameters
+n_classes <- 10
+n_features <- 784
+n_hidden <- 10
+params <- init_params(n_classes, n_features, n_hidden)
+W1 <- params[[1]]
+b1 <- params[[2]]
+W2 <- params[[3]]
+b2 <- params[[4]]
+
+# Initialize Adam optimizer parameters
+m <- rep(0, length(c(W1, b1, W2, b2)))
+v <- rep(0, length(c(W1, b1, W2, b2)))
+t <- 0
+
+# Set learning rate and number of iterations
+learning_rate <- 0.001
+beta1 <- 0.9
+beta2 <- 0.999
+epsilon <- 1e-8
+num_iterations <- 100
+
+# Train model
+for (i in 1:num_iterations) {
+  # Forward pass
+  Z1 <- W1 %*% X_train + b1
+  A1 <- ReLU(Z1)
+  Z2 <- W2 %*% A1 + b2
+  A2 <- softmax(Z2)
+  
+  # Backward pass
+  dZ2 <- A2 - one_hot(Y_train)
+  dW2 <- t(dZ2 %*% t(A1)) / m
+  db2 <- rowSums(dZ2) / m
+  dZ1 <- t(W2) %*% dZ2 * ReLU_deriv(Z1)
+  dW1 <- t(dZ1 %*% t(X_train)) / m
+  db1 <- rowSums(dZ1) / m
+  
+  # Update parameters using Adam optimizer
+  t <- t + 1
+  params <- list(params = c(W1, b1, W2, b2), m = m, v = v)
+  gradients <- c(dW1, db1, dW2, db2)
+  params <- adam_optimizer(params, gradients, learning_rate, beta1, beta2, epsilon, t)
+  W1 <- matrix(params$params[1:n_hidden * n_features], nrow = n_hidden, ncol = n_features)
+  b1 <- matrix(params$params[(n_hidden * n_features + 1):(n_hidden * n_features + n_hidden)], nrow = n_hidden, ncol = 1)
+  W2 <- matrix(params$params[(n_hidden * n_features + n_hidden + 1):(n_hidden * n_features + n_hidden + n_classes * n_hidden)], nrow = n_classes, ncol = n_hidden)
+  b2 <- matrix(params$params[(n_hidden * n_features + n_hidden + n_classes * n_hidden + 1):length(params$params)], nrow = n_classes, ncol = 1)
+  
+  # Print accuracy every 10 iterations
+  if (i %% 10 == 0) {
+    predictions <- get_predictions(A2)
+    cat("Iteration", i, "accuracy:", get_accuracy(predictions, Y_train), "\n")
+  }
+}
 
 
-# Test the accuracy of the neural network on the test data
-cat("Accuracy:", acc, "\n")
 ```
 
 
-From a mathematical perspective, the gradient computation can be understood using the chain rule of calculus and the definition of the loss function.
+
+
+
+
 
 Let's denote the loss function as `L`, which is a function of the predicted output `z2` and the true labels `label`. The goal is to compute the gradient of the loss function with respect to the weights of the second layer `W2`, denoted as 
 $$\frac{\partial L}{\partial W_2}$$.
@@ -331,7 +165,10 @@ Here,
 $$\frac{\partial L}{\partial z_2}$$
 
 represents the gradient of the loss function with respect to the predicted output `z2`, and 
-$$\frac{\partial z_2}{\partial W_2}$$ represents the gradient of the predicted output `z2` with respect to the weights `W2`.
+
+$$\frac{\partial z_2}{\partial W_2}$$ 
+
+represents the gradient of the predicted output `z2` with respect to the weights `W2`.
 
 Now, let's assume the loss function is a mean squared error (MSE) between the predicted output `z2` and the true labels `label`, which is a common choice in neural networks:
 
@@ -339,16 +176,17 @@ $$L = \frac{1}{2} \left(\text{label} - z_2\right)^2$$
 
 Using the chain rule, we can compute the gradient of the loss function with respect to `z2` as:
 
-$$\frac{\partial L}{\partial z_2} = - \left(\text{label} - z_2\right)$$
+$$\frac{\partial L}{\partial z_2} =  \left(\text{label} - z_2\right)$$
 
-This is because derivative of the squared error with respect to `z2` is 
-$$-2 \cdot \left(\text{label} - z_2\right)$$, and we divide by 2 to get the average error.
+This is because derivative of the squared error with respect to `z2` is
+
+$$2 \cdot \left(\text{label} - z_2\right)$$
+
+and we divide by 2 to get the average error.
 
 Now, we need to compute the gradient of the predicted output `z2` with respect to the weights `W2`. Assuming the neural network has a linear activation function in the second layer, we can write `z2` as:
 
 $$z_2 = W_2 \cdot z_1 + b_2$$
-
-
 
 where `z1` is the output of the first layer, and `b2` is the bias term in the second layer.
 
@@ -417,9 +255,6 @@ $$\frac{\partial L}{\partial W_2} = \frac{\partial L}{\partial z_2} \cdot \frac{
 This is exactly what the line of code `dW2 <- t(z1) %*% db2_temp` is computing! The transpose of $z_1$ is used to ensure the correct matrix multiplication, and `db2_temp` represents the error term $y - z_2$.
 
 
-
-Here is the rewritten explanation with LaTeX expressions:
-
 When computing the derivative of the loss function with respect to the weights $W_2$, we can ignore the inputs $z_1$ and $b_2$ because they are not directly affected by the weights $W_2$.
 
 To see why, let's revisit the expression for the output $z_2$:
@@ -443,25 +278,56 @@ Of course, this assumption is only valid if the inputs $z_1$ and $b_2$ are indee
 But in this specific case, ignoring $_1$ and $b_2$ allows us to focus on the direct effect of $W_2$ on the output $z_2$, which is exactly what we need to compute the gradient of the loss function with respect to the weights.
 
 
-# MicroGradCPP
+## Step 1: Compute the partial derivative of the loss with respect to yh
+The partial derivative of the loss with respect to yh is computed as follows:
 
-```{Rcpp}
-#include <Rcpp.h>
-using namespace Rcpp;
-int main(){
-    std::cout << "The number of elements in mymatrix2 is " << std::endl;
-    return 1;
-}
+$$\frac{\partial L}{\partial yh} = \frac{\partial}{\partial yh} (yh - t(y))^2 = 2(yh - t(y))$$
 
-//[[Rcpp::export]]
-Rcpp::IntegerVector double2Me() {
-  return main();
-}
+## Step 2: Compute the partial derivative of the loss with respect to th
+Using the chain rule, we can compute the partial derivative of the loss with respect to th as follows:
 
-```
+$$\frac{\partial L}{\partial th} = \frac{\partial L}{\partial yh} \frac{\partial yh}{\partial th} = 2(yh - t(y)) \frac{\partial}{\partial th} softmax(th)$$
 
-```{r}
-double2Me()
-```
+## Step 3: Compute the partial derivative of the softmax function with respect to th
+The partial derivative of the softmax function with respect to th is computed as follows:
+
+$$\frac{\partial}{\partial th} softmax(th) = softmax(th) (1 - softmax(th))$$
+
+## Step 4: Compute the partial derivative of the loss with respect to th
+Substituting the result from Step 3 into the result from Step 2, we get:
+
+$$\frac{\partial L}{\partial th} = 2(yh - t(y)) softmax(th) (1 - softmax(th))$$
+
+## Step 5: Compute the partial derivative of the loss with respect to h
+Using the chain rule, we can compute the partial derivative of the loss with respect to h as follows:
+
+$$\frac{\partial L}{\partial h} = \frac{\partial L}{\partial th} \frac{\partial th}{\partial h} = 2(yh - t(y)) softmax(th) (1 - softmax(th)) U$$
+
+## Step 6: Compute the partial derivative of the loss with respect to z
+Using the chain rule, we can compute the partial derivative of the loss with respect to z as follows:
+
+$$\frac{\partial L}{\partial z} = \frac{\partial L}{\partial h} \frac{\partial h}{\partial z} = 2(yh - t(y)) softmax(th) (1 - softmax(th)) U sgn(z)$$
+
+## Step 7: Compute the partial derivative of the loss with respect to W
+Using the chain rule, we can compute the partial derivative of the loss with respect to W as follows:
+
+$$\frac{\partial L}{\partial W} = \frac{\partial L}{\partial z} \frac{\partial z}{\partial W} = 2(yh - t(y)) softmax(th) (1 - softmax(th)) U sgn(z) x$$
+
+## Step 8: Compute the partial derivative of the loss with respect to b1
+Using the chain rule, we can compute the partial derivative of the loss with respect to b1 as follows:
+
+$$\frac{\partial L}{\partial b1} = \frac{\partial L}{\partial z} \frac{\partial z}{\partial b1} = 2(yh - t(y)) softmax(th) (1 - softmax(th)) U sgn(z)$$
+
+## Step 9: Compute the partial derivative of the loss with respect to U
+Using the chain rule, we can compute the partial derivative of the loss with respect to U as follows:
+
+$$\frac{\partial L}{\partial U} = \frac{\partial L}{\partial th} \frac{\partial th}{\partial U} = 2(yh - t(y)) softmax(th) (1 - softmax(th)) h$$
+
+## Step 10: Compute the partial derivative of the loss with respect to b2
+Using the chain rule, we can compute the partial derivative of the loss with respect to b2 as follows:
+
+$$\frac{\partial L}{\partial b2} = \frac{\partial L}{\partial th} \frac{\partial th}{\partial b2} = 2(yh - t(y)) softmax(th) (1 - softmax(th))$$
+
+
 
 
