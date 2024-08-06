@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <ostream>
+#include <random>
 #include <sstream>
 using namespace std;
 
@@ -10,30 +11,23 @@ using namespace std;
 #define CLASSES 10
 #define HIDDEN 10
 
-typedef double train[COL][ROW];
-typedef double l1[HIDDEN][ROW];
-typedef double l2[HIDDEN][CLASSES];
-typedef double beta1[HIDDEN];
-typedef double beta2[CLASSES];
-typedef double zeta1[HIDDEN][ROW];
-typedef double zeta2[CLASSES][ROW];
+double w1[HIDDEN][FEAT];
 
-train *x_train = new train[1];
-l1 *w1[1];
-l2 *w2[1];
-beta1 *b1[1];
-beta2 *b2[1];
-zeta1 *z1 = new zeta1[1];
-zeta2 *z2 = new zeta2[1];
-zeta1 *a1 = new zeta1[1];
-zeta2 *a2 = new zeta2[1];
+double (*x_train)[ROW] = new double[COL][ROW];
+double w2[HIDDEN][CLASSES];
+double b1[HIDDEN];
+double b2[CLASSES];
+double (*z1)[ROW] = new double[HIDDEN][ROW];
+double (*z2)[ROW] = new double[CLASSES][ROW];
+double (*a1)[ROW] = new double[HIDDEN][ROW];
+double (*a2)[ROW] = new double[HIDDEN][ROW];
+double (*dz1)[ROW] = new double[HIDDEN][ROW];
+double (*dz2)[ROW] = new double[CLASSES][ROW];
 
-zeta2 *dz2 = new zeta2[1];
-l2 *dw2[1];
-beta2 *db2[1];
-beta1 *db1[1];
-zeta1 *dz1 = new zeta1[1];
-l1 *dw1;
+double dw2[HIDDEN][CLASSES];
+double db2[CLASSES];
+double db1[HIDDEN];
+double dw1[HIDDEN][FEAT];
 
 int main() {
   std::ifstream file("data.csv");
@@ -48,7 +42,7 @@ int main() {
     std::istringstream iss(line);
     double value;
     while (iss >> value) {
-      x_train[0][col][row] = static_cast<double>(value);
+      x_train[col][row] = static_cast<double>(value);
       col++;
     }
     col = 0;
@@ -57,6 +51,19 @@ int main() {
   file.close();
 
   cout << "Read " << row << " rows" << endl;
-  cout << x_train[0][0][row] << endl;
+  cout << x_train[0][0] << endl;
+
+  // populate the weights;
+  //
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dis(0.0, 1.0);
+
+  for (int i = 0; i < HIDDEN; i++) {
+    for (int j = 0; j < FEAT; j++) {
+      w1[i][j] = dis(gen);
+    }
+  }
+
   return 0;
 }
