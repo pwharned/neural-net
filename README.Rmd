@@ -68,6 +68,13 @@ softmax <- function(Z1) {
   exp_Z = exp(Z1)
   sweep(exp_Z, 2, colSums(exp_Z),  "/")
 }
+init_params_non_random <- function(n_classes, n_features, n_hidden) {
+  W1 <- matrix(0.5, nrow = n_hidden, ncol = n_features)
+  b1 <- as.double(matrix(0.5, nrow = n_hidden, ncol = 1))
+  W2 <- matrix(0.5, nrow = n_classes, ncol = n_hidden)
+  b2 <- as.double(matrix(0.5, nrow = n_classes, ncol = 1))
+  return(list(W1, b1, W2, b2))
+}
 
 ReLU_deriv <- function(Z) {
   Z > 0
@@ -96,6 +103,8 @@ n_classes <- 10
 n_features <- 784
 n_hidden <- 10
 params <- init_params(n_classes, n_features, n_hidden)
+params <- init_params_non_random(n_classes, n_features, n_hidden)
+
 W1 <- params[[1]]
 b1 <- params[[2]]
 W2 <- params[[3]]
