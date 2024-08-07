@@ -105,7 +105,6 @@ int main() {
   }
 
   // should equal 1
-  cout << one_hot_y[5][0] << endl;
 
   for (int it = 0; it < 10; it++) {
     // training loop
@@ -166,7 +165,7 @@ int main() {
     }
 
     for (int i = 0; i < CLASSES; i++) {
-      b2[i] -= (db1[i] * alpha);
+      b2[i] -= (db1[i] * alpha) / 255;
     }
 
     // calculate dW2 as the derivative of loss wrt W2 - this is the dot product
@@ -175,7 +174,7 @@ int main() {
       for (int j = 0; j < HIDDEN; j++) {
         for (int k = 0; k < ROW; k++) {
           dw2[i][j] += dz2[i][k] * a1[j][k];
-          w2[i][j] -= (dw1[i][j] * alpha);  // update w2
+          w2[i][j] -= (dw1[i][j] * alpha) / 255;  // update w2
         }
       }
     }
@@ -188,7 +187,7 @@ int main() {
           dz1[i][j] += (w2[k][i] * dz2[k][j] * (z1[i][j] > 0 ? 1 : 0));
         }
         db1[i] += dz1[i][j];
-        b1[i] -= (db1[i] * alpha);
+        b1[i] -= (db1[i] * alpha) / 255;
       }
     }
     // dw1 the derivative of loss wrt w1(FEATxHIDDEN) = (10 x 59999) x (59999 X
@@ -199,7 +198,7 @@ int main() {
       for (int j = 0; j < FEAT; j++) {
         for (int k = 0; k < ROW; k++) {
           dw1[i][j] += dz1[i][k] * x_train[j][k];
-          w1[i][j] -= (dw1[i][j] * alpha);
+          w1[i][j] -= (dw1[i][j] * alpha) / 255;
         }
       }
     }
