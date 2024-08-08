@@ -43,7 +43,7 @@ int max_idx = 0;
 int ground_truth = 0;  // the index value of the ground truth;
 int n_correct = 0;     // the number of correct predictions
 double exp_max = 0;
-double alpha = 0.4;
+double alpha = 0.9;
 
 int main() {
   std::ifstream file("data.csv");
@@ -76,7 +76,7 @@ int main() {
   //
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_real_distribution<double> dis(0.0, 1.0);
+  std::uniform_real_distribution<double> dis(-0.5, 0.5);
 
   for (int i = 0; i < FEAT; i++) {
     for (int j = 0; j < HIDDEN; j++) {
@@ -146,7 +146,7 @@ int main() {
       exp_max = 0.0;
       max_idx = 0;
       for (int j = 0; j < CLASSES; j++) {
-        a2[j][i] /= exp_sum;
+        a2[j][i] /= (exp_sum + .01);
         // calculate the softmax
         dz2[j][i] = a2[j][i] - one_hot_y[j][i];
         db2[j] += dz2[j][i];
@@ -172,9 +172,10 @@ int main() {
     // of dz2 (60000X10) with the transpose of  A1 (10x60000)
     for (int i = 0; i < CLASSES; i++) {
       for (int j = 0; j < HIDDEN; j++) {
+        dw2[i][j] = 0.0;
         for (int k = 0; k < ROW; k++) {
           dw2[i][j] += dz2[i][k] * a1[j][k];
-          w2[i][j] -= (dw1[i][j] * alpha) / 255;  // update w2
+          w2[i][j] -= (dw2[i][j] * alpha) / 255;  // update w2
         }
       }
     }
@@ -182,7 +183,10 @@ int main() {
     // dZ1 : transpose of  W2  * dZ2 *  (relu derivative of Z1)
     //
     for (int i = 0; i < HIDDEN; i++) {
+      db1[i] = 0.0;
       for (int j = 0; j < ROW; j++) {
+        dz1[i][j] = 0.0;
+
         for (int k = 0; k < CLASSES; k++) {
           dz1[i][j] += (w2[k][i] * dz2[k][j] * (z1[i][j] > 0 ? 1 : 0));
         }
@@ -196,9 +200,11 @@ int main() {
 
     for (int i = 0; i < HIDDEN; i++) {
       for (int j = 0; j < FEAT; j++) {
+        dw1[i][j] = 0.0;
         for (int k = 0; k < ROW; k++) {
           dw1[i][j] += dz1[i][k] * x_train[j][k];
           w1[i][j] -= (dw1[i][j] * alpha) / 255;
+          cout << w1[i][j];
         }
       }
     }
