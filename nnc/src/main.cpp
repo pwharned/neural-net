@@ -17,7 +17,7 @@ using namespace std;
 #define NORM 255  /// max value for normalization
 
 const double m = (double)1 / MAX;
-typedef double precision;
+typedef float precision;
 
 precision (*x_train)[ROW] = new precision[FEAT][ROW];
 int *y = new int[ROW];
