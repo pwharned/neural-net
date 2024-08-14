@@ -1,14 +1,10 @@
-#include <bits/stdc++.h>
-#include <strings.h>
-
 #include <cmath>
-#include <csignal>
 #include <fstream>
 #include <iostream>
 #include <ostream>
 #include <random>
 #include <sstream>
-#include <string>
+#include <vector>
 
 using namespace std;
 
@@ -16,12 +12,13 @@ using namespace std;
 #define COL 785
 #define FEAT COL - 1
 #define CLASSES 10
-#define HIDDEN 11
+#define HIDDEN 10
 #define MAX 60000
 #define NORM 255  /// max value for normalization
-const double euler = 2.71828182845904523536;
 
-typedef long double precision;
+const double m = (double)1 / MAX;
+typedef double precision;
+
 precision (*x_train)[ROW] = new precision[FEAT][ROW];
 int *y = new int[ROW];
 
@@ -43,12 +40,11 @@ precision dw2[CLASSES][HIDDEN];
 
 precision db2;
 precision db1;
-
+precision relu_leak = 0.0;
 precision (*dw1)[FEAT] = new precision[HIDDEN][FEAT];
-int (*one_hot_y)[ROW] = new int[CLASSES][ROW];
+precision (*one_hot_y)[ROW] = new precision[CLASSES][ROW];
 
-int n_correct = 0;  // the number of correct predictions
-precision alpha = 0.9;
+precision alpha = .7;
 
 int main() {
   std::ifstream file("data.csv");
@@ -83,39 +79,51 @@ int main() {
       one_hot_y[j][i] = (j == index) ? 1 : 0;
     }
   }
-
+  std::vector<int> x;
+  for (int i = 0; i < COL; i++) {
+    int sum = 0;
+    for (int j = 0; j < ROW; j++) {
+      sum += x_train[i][j];
+    }
+    if (sum != 0) {
+      x.push_back(i);
+    }
+  }
   // populate the weights;
   //
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_real_distribution<precision> dis(0, 1);
+  std::uniform_real_distribution<precision> dis(-1, 1);
 
   bool test = false;
   for (int i = 0; i < HIDDEN; i++) {
     for (int j = 0; j < FEAT; j++) {
-      w1[i][j] = test ? 0.05 : dis(gen) - .5;
+      w1[i][j] = test ? 0.1 : dis(gen) * 1 / sqrt(HIDDEN);
       /// ;
     }
   }
 
   for (int i = 0; i < CLASSES; i++) {
     for (int j = 0; j < HIDDEN; j++) {
-      w2[i][j] = test ? 0.05 : dis(gen) - .5;
+      w2[i][j] = test ? 0.1 : dis(gen) * 1 / sqrt(HIDDEN);
     }
   }
 
   for (int i = 0; i < HIDDEN; i++) {
-    b1[i] = test ? 0.05 : dis(gen) - .5;
+    b1[i] = test ? 0.1 : 0;
   }
   for (int i = 0; i < CLASSES; i++) {
-    b2[i] = test ? 0.05 : dis(gen) - .5;
+    b2[i] = test ? 0.1 : 0;
   }
 
-  while (n_correct / (precision)ROW < .95) {
+  double accuracy = 0.0;
+  int it = 0;
+  while (accuracy < .95) {
     // Z1 = W1.dot(X_train) + b1
     // A1 = RelU(Z1)
     //
-
+    it += 1;
+    double a1sum = 0.0;
     for (int i = 0; i < HIDDEN; i++) {
       for (int j = 0; j < ROW; j++) {
         z1[i][j] = 0.0;
@@ -123,7 +131,8 @@ int main() {
           z1[i][j] += w1[i][k] * x_train[k][j];
         }
         z1[i][j] += b1[i];
-        a1[i][j] = (z1[i][j] <= 0.0) ? 0.0 : z1[i][j];
+        a1[i][j] = (z1[i][j] < 0.0) ? relu_leak : z1[i][j];
+        a1sum += a1[i][j];
       }
     }
 
@@ -140,99 +149,125 @@ int main() {
       }
     }
 
-    int n_correct = 0;
     for (int i = 0; i < ROW; i++) {
       precision exp_sum = 0.0;
       for (int j = 0; j < CLASSES; j++) {
-        a2[j][i] = pow(euler, z2[j][i]);
+        a2[j][i] = exp(z2[j][i]);
 
         exp_sum += a2[j][i];
       }
-      int prediction = 0;
-      precision max = 0;
       for (int j = 0; j < CLASSES; j++) {
         a2[j][i] /= exp_sum;
+      }
+    }
+
+    int n_correct = 0;
+    for (int i = 0; i < ROW; i++) {
+      precision max = a2[0][i];
+      int prediction = 0;
+      for (int j = 0; j < CLASSES; j++) {
         if (a2[j][i] > max) {
+          max = a2[j][i];
           prediction += 1;
-          max = (a2[j][i]);
         }
       }
-
-      if (y[i] == prediction) {
+      if ((int)y[i] == prediction) {
         n_correct += 1;
       }
     }
 
     db2 = 0.0;
+    double dz2sum = 0.0;
     for (int i = 0; i < ROW; i++) {
       for (int j = 0; j < CLASSES; j++) {
         dz2[j][i] = a2[j][i] - one_hot_y[j][i];
+        dz2sum += dz2[j][i];
         db2 += dz2[j][i];
       }
     }
-    db2 /= MAX;
+    db2 *= m;
 
+    double dw2sum = 0.0;
     for (int i = 0; i < CLASSES; i++) {
       for (int j = 0; j < HIDDEN; j++) {
         dw2[i][j] = 0.0;
         for (int k = 0; k < ROW; k++) {
           dw2[i][j] += (dz2[i][k] * a1[j][k]);
         }
-        dw2[i][j] /= MAX;
+        dw2[i][j] *= (m);
+        dw2sum += dw2[i][j];
       }
     }
 
     db1 = 0.0;
     // dZ1 = W2.T.dot(dZ2) * ReLU_deriv(Z1)
     //// this is incorrect
-    ///
-    ///
-    ///
+    for (int i = 0; i < CLASSES; i++) {
+      for (int j = 0; j < HIDDEN; j++) {
+        w2T[j][i] = w2[i][j];
+      }
+    }
 
+    double dz1sum = 0.0;
     for (int i = 0; i < HIDDEN; i++) {
       for (int j = 0; j < ROW; j++) {
         dz1[i][j] = 0.0;
 
         for (int k = 0; k < CLASSES; k++) {
-          dz1[i][j] += (w2[k][i] * dz2[k][j]);
+          dz1[i][j] += (w2T[i][k] * dz2[k][j]);
+          // dz1[i][j] += (m1(i, k) * mdz2(k, j));
         }
+        dz1sum += dz1[i][j];
 
-        dz1[i][j] *= (z1[i][j] <= 0 ? 0 : 1);
+        dz1[i][j] *= (z1[i][j] < 0 ? relu_leak : 1);
 
         db1 += dz1[i][j];
       }
     }
 
-    db1 /= MAX;
+    db1 *= m;
+
+    double dw1sum = 0.0;
+
     for (int i = 0; i < HIDDEN; i++) {
       for (int j = 0; j < FEAT; j++) {
         dw1[i][j] = 0.0;
         for (int k = 0; k < ROW; k++) {
           dw1[i][j] += (dz1[i][k] * x_train[j][k]);
         }
-        dw1[i][j] /= MAX;
+        dw1[i][j] *= m;
+        dw1sum += dw1[i][j];
       }
     }
     // dw2 appears to be correct, but not dW1
     // dw1 is incorrect because dz1 is incorrect
     // dz1 is based on dz2 and w2. dz2 appears to be correct. w2 must be
     // correct.
-    // cout << w2[0][9] << endl;
+    //
+    double w2sum = 0.0;
     for (int i = 0; i < CLASSES; i++) {
       b2[i] -= (alpha * db2);
       for (int j = 0; j < HIDDEN; j++) {
-        w2[i][j] -= (dw2[i][j] * alpha);
+        w2[i][j] -= (alpha * dw2[i][j]);
+        w2sum += w2[i][j];
       }
     }
 
+    double w1sum = 0.0;
     for (int i = 0; i < HIDDEN; i++) {
       b1[i] -= (alpha * db1);
       for (int j = 0; j < FEAT; j++) {
         w1[i][j] -= (alpha * dw1[i][j]);
+        w1sum += w1[i][j];
       }
     }
-
-    cout << "Accuracy is " << n_correct / (double)ROW << endl;
+    cout << "W1 sum is " << w1sum << " and W2sum is " << w2sum
+         << " And dw2 sum is " << dw2sum << " and Dz2 sum is " << dz2sum
+         << " and a1sum is " << a1sum << "and dw1sum is " << dw1sum
+         << "and db1 is " << db1 << " and dz1sum is " << dz1sum << endl;
+    accuracy = n_correct / (double)ROW;
+    cout << "Accuracy is " << accuracy << " after " << it << " iterations with "
+         << n_correct << "correct" << endl;
   }
   return 0;
 }
