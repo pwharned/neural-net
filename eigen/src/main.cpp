@@ -17,7 +17,7 @@ using namespace std;
 #define NORM 255  /// max value for normalization
 
 const double m = (double)1 / MAX;
-typedef float precision;
+typedef double precision;
 
 precision (*x_train)[ROW] = new precision[FEAT][ROW];
 int *y = new int[ROW];
@@ -162,6 +162,7 @@ int main() {
     }
 
     int n_correct = 0;
+    double a2sum = 0.0;
     for (int i = 0; i < ROW; i++) {
       precision max = a2[0][i];
       int prediction = 0;
@@ -170,6 +171,7 @@ int main() {
           max = a2[j][i];
           prediction += 1;
         }
+        a2sum += a2[j][i];
       }
       if ((int)y[i] == prediction) {
         n_correct += 1;
@@ -261,10 +263,17 @@ int main() {
         w1sum += w1[i][j];
       }
     }
+
+    double testSum = 0.0;
+    for (int i = 0; i < CLASSES; i++) {
+      testSum += dz2[i][0];
+    }
+    cout << testSum << endl;
     cout << "W1 sum is " << w1sum << " and W2sum is " << w2sum
          << " And dw2 sum is " << dw2sum << " and Dz2 sum is " << dz2sum
          << " and a1sum is " << a1sum << "and dw1sum is " << dw1sum
-         << "and db1 is " << db1 << " and dz1sum is " << dz1sum << endl;
+         << "and db1 is " << db1 << " and dz1sum is " << dz1sum
+         << " and a2sum is " << a2sum << endl;
     accuracy = n_correct / (double)ROW;
     cout << "Accuracy is " << accuracy << " after " << it << " iterations with "
          << n_correct << "correct" << endl;
