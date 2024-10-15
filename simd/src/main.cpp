@@ -812,6 +812,58 @@ void sum_along_axis(const Matrix& mat, Matrix& result, int axis) {
   }
 }
 
+void multiplyMatrixByConstantAVX512(Matrix& A, float constant) {
+    const int simdWidth = 16;       // SIMD width for AVX-512
+    const int totalElements = A.rows * A.cols;
+    const int unrollFactor = 4;
+    const int stride = unrollFactor * simdWidth;
+    const int totalIterations = totalElements / stride;
+    const int remainingElements = totalElements % stride;
+    const int start = totalElements - remainingElements;
+
+  cout << totalElements << " " << totalIterations << " " << stride << endl;
+#pragma omp parallel for
+    for (int idx = 0; idx < totalIterations; idx++) {
+    const int baseIdx = idx * stride;
+        // Prefetch the next block of data
+        _mm_prefetch(&A.data[baseIdx * stride], _MM_HINT_T0);
+
+        // Perform full SIMD iterations
+    __m512 a;
+    __m512 c;
+    __m512 result;
+    a = _mm512_loadu_ps(&A.data[baseIdx + 0 * simdWidth]);
+    c = _mm512_set1_ps(constant);
+    result = _mm512_mul_ps(a, c);
+            _mm512_storeu_ps(&A.data[baseIdx + 0 * simdWidth], result);
+
+
+    a = _mm512_loadu_ps(&A.data[baseIdx + 1 * simdWidth]);
+    c = _mm512_set1_ps(constant);
+    result = _mm512_mul_ps(a, c);
+            _mm512_storeu_ps(&A.data[baseIdx + 1 * simdWidth], result);
+  
+    a = _mm512_loadu_ps(&A.data[baseIdx + 2 * simdWidth]);
+    c = _mm512_set1_ps(constant);
+    result = _mm512_mul_ps(a, c);
+            _mm512_storeu_ps(&A.data[baseIdx + 2 * simdWidth], result);
+  
+    a = _mm512_loadu_ps(&A.data[baseIdx + 3 * simdWidth]);
+    c = _mm512_set1_ps(constant);
+    result = _mm512_mul_ps(a, c);
+            _mm512_storeu_ps(&A.data[baseIdx + 3 * simdWidth], result);
+  }
+
+    // Handle the remaining elements (if any)
+    for (int idx = start; idx < totalElements; ++idx) {
+        A.data[idx] *= constant;
+    }
+}
+
+
+
+
+
 void test_sum_along_axis() {
   // Create and initialize matrices
   Matrix mat, result_row, result_col;
@@ -851,6 +903,10 @@ void test_sum_along_axis() {
   for (int j = 0; j < 3; ++j) {
     assert(result_col.get(0, j) == expected_col[j]);
   }
+
+
+  
+
 
   std::cout << "Row-wise and column-wise sum test passed!" << std::endl;
 }
@@ -978,5 +1034,9 @@ int main() {
   softmax(Z2, A2);
   matrix_difference(A2, one_hot_y,Dz2);
   sum_along_axis(Dz2, db2, 1);
+  test_sum_along_axis();
+  multiplyMatrixByConstantAVX512(A2,100);
+
+  A2.display();
   return 0;
 }
