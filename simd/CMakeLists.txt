@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(minigradcpp)
+project(neural-net)
 
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)  # Or your desired standard
@@ -32,7 +32,7 @@ add_test(NAME MyTest COMMAND tests)
 
 #target_include_directories(test, PRIVATE ../src)
 
-add_executable(main ${CPPS} ${HPPS} )
+add_executable(${PROJECT_NAME} ${CPPS} ${HPPS} )
 
 
 

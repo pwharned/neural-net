@@ -1,5 +1,6 @@
 #include <cmath>
 #include <omp.h>
+#include <cstdint>
 #include <iostream>
 #include <cstring>
 #include <immintrin.h>  // Header for AVX intrinsics
@@ -22,10 +23,10 @@ typedef union
 
 
 
-void display(double *a, int lda,int k){
-  for (int i =0;i<lda;i++){
+void display(double *a, int n,int k, int lda){
+  for (int i =0;i<n;i++){
     for (int j = 0;j<k;j++){
-      cout << "|" << A(i,j) << "|";
+      cout << "|" << A(j,i) << "|";
     }
     cout << endl;
   }
@@ -36,15 +37,16 @@ void AddDot8x8( int, double *, int, double *, int, double *, int );
 void PackMatrixA( int, double *, int, double * );
 void PackMatrixB( int, double *, int, double * );
 void InnerKernel( int, int, int, double *, int, double *, int, double *, int, int );
+void kernelMxN(int , int , int , double *, double *, double *,int ); 
 
-void MY_MMult( int m, int n, int k, double *a, int lda, 
+void dot( int m, int n, int k, double *a, int lda, 
                                     double *b, int ldb,
                                     double *c, int ldc )
 {
   int i, p, pb, ib;
 
   /* This time, we compute a mc x n block of C by a call to the InnerKernel */
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for ( p=0; p<k; p+=kc ){
     pb = min( k-p, kc );
     for ( i=0; i<m; i+=mc ){
@@ -56,7 +58,7 @@ void MY_MMult( int m, int n, int k, double *a, int lda,
 
 void InnerKernel( int m, int n, int k, double *a, int lda, 
                                        double *b, int ldb,
-                                       double *c, int ldc, int first_time )
+double *c, int ldc, int first_time )
 {
   int i, j;
   double 
@@ -72,10 +74,28 @@ void InnerKernel( int m, int n, int k, double *a, int lda,
 	 one routine (four inner products) */
       if ( j == 0 ) 
 	PackMatrixA( k, &A( i, 0 ), lda, &packedA[ i*k ] );
-      AddDot8x8( k, &packedA[ i*k ], 8, &packedB[ j*k ], k, &C( i,j ), ldc );
+      //AddDot8x8( k, &packedA[ i*k ], 8, &packedB[ j*k ], k, &C( i,j ), ldc );
+      kernelMxN(8,8,8,&packedA[i*k], &packedB[j*k], &C(i,j), ldc);
     }
   }
 }
+
+
+void pack( int k, int m, double *a, int lda, double *a_to )
+{
+
+  for(int j=0; j<k; j++){  /* loop over columns of A */
+    double 
+      *a_ij_pntr = &A( 0, j );
+    for(int i =0;i<m;i++){
+
+    *(a_to++) = *(a_ij_pntr++);
+    }
+
+  }
+}
+
+
 
 void PackMatrixA( int k, double *a, int lda, double *a_to )
 {
@@ -84,17 +104,11 @@ void PackMatrixA( int k, double *a, int lda, double *a_to )
   for( j=0; j<k; j++){  /* loop over columns of A */
     double 
       *a_ij_pntr = &A( 0, j );
+    for(int i =0;i<8;i++){
 
-    *a_to     = *a_ij_pntr;
-    *(a_to+1) = *(a_ij_pntr+1);
-    *(a_to+2) = *(a_ij_pntr+2);
-    *(a_to+3) = *(a_ij_pntr+3);
-    *(a_to+4) = *(a_ij_pntr+4);
-    *(a_to+5) = *(a_ij_pntr+5);
-    *(a_to+6) = *(a_ij_pntr+6);
-    *(a_to+7) = *(a_ij_pntr+7);
+    *(a_to++) = *(a_ij_pntr++);
+    }
 
-    a_to += 8;
   }
 }
 
@@ -122,6 +136,81 @@ void PackMatrixB( int k, double *b, int ldb, double *b_to )
 }
 
 
+
+void kernelMxN(int m, int n, int k, double *a, double *b, double *c,int ldc) {
+    /*
+        m: Rows of matrix A and resulting matrix C.
+        n: Columns of matrix B and resulting matrix C.
+        k: Columns of matrix A (or rows of matrix B).
+    */
+
+
+    v16df_t c_vreg[8]; // Vector registers for accumulating results
+    v16df_t b_vreg, a_vreg;
+
+    // Initialize the result matrix
+    for (int j = 0; j < n; j++) {
+        c_vreg[j].v = _mm512_setzero_pd();
+    }
+
+    // Compute the matrix multiplication
+    for (int p = 0; p < k; p++) {
+        // Load one column of A (masked for m rows)
+        a_vreg.v = _mm512_mask_load_pd(_mm512_setzero_pd(), (1 << m) - 1, a);
+        
+        a += 8; // Move to the next column of A
+
+        for (int j = 0; j < n; j++) {
+            // Load one element of B (masked for n columns)
+            b_vreg.v = _mm512_set1_pd(b[j]);
+           // b_vreg.v = _mm512_mask_mov_pd(_mm512_setzero_pd(), (1 << m) - 1, temp_b_vreg.v); 
+            // Perform vectorized multiplication and accumulation
+      //
+            c_vreg[j].v += a_vreg.v * b_vreg.v;
+    
+      
+        }
+
+        b += 8; // Move to the next column of B
+    }
+
+    // Store the results back into matrix C
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            C(i,j) += c_vreg[j].d[i];
+        }
+    }
+
+    
+}
+
+
+void AddDotMxN(int k, double *a, int m, double *b, int n, double *c, int ldc) {
+  // modified kernelMxN to handle rectangular matrices
+  int p;
+  v16df_t c_vreg[m], b_vreg[n], a_vreg;
+  for (int i = 0; i < m; i++) {
+    c_vreg[i].v = _mm512_setzero_pd();
+  }
+  for (p = 0; p < k; p++) {
+    a_vreg.v = _mm512_load_pd(a);
+    a += 8; // assuming lda == 8
+    for (int j = 0; j < n; j++) {
+      b_vreg[j].v = _mm512_set1_pd(b[j]);
+    }
+    b += 8;
+    for (int i = 0; i < m; i++) {
+      c_vreg[i].v += a_vreg.v * b_vreg[i].v;
+    }
+  }
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      c[i * ldc + j] += c_vreg[i].d[j];
+    }
+  }
+}
+
+
 void AddDot8x8( int k, double *a, int lda,  double *b, int ldb, double *c, int ldc )
 {
 
@@ -145,7 +234,7 @@ void AddDot8x8( int k, double *a, int lda,  double *b, int ldb, double *c, int l
 
   for ( p=0; p<k; p++ ){
     a_0p_a_7p_vreg.v = _mm512_load_pd( (double *) a );
-    a += 8;
+    a += lda;
 
     b_p0_vreg.v = _mm512_set1_pd( * b );       /* load and duplicate */
     b_p1_vreg.v = _mm512_set1_pd( * (b+1) );   /* load and duplicate */
@@ -156,7 +245,7 @@ void AddDot8x8( int k, double *a, int lda,  double *b, int ldb, double *c, int l
     b_p6_vreg.v = _mm512_set1_pd( * (b+6) );   /* load and duplicate */
     b_p7_vreg.v = _mm512_set1_pd( * (b+7) );   /* load and duplicate */
 
-    b += 8;
+    b += ldb;
 
     /* First row and second rows */
     c_00_c_70_vreg.v += a_0p_a_7p_vreg.v * b_p0_vreg.v;
@@ -211,4 +300,65 @@ C( 7, 2 ) += c_02_c_72_vreg.d[7];  C( 7, 3 ) += c_03_c_73_vreg.d[7];
 C( 7, 4 ) += c_04_c_70_vreg.d[7];  C( 7, 5 ) += c_05_c_71_vreg.d[7];  
 C( 7, 6 ) += c_06_c_72_vreg.d[7];  C( 7, 7 ) += c_07_c_73_vreg.d[7];  
 
+}
+
+
+void PackMatrixA(int k, double *a, int lda, double *a_to, int m) {
+  int j;
+  for (j = 0; j < k; j++) {
+    double *a_ij_pntr = &a[j * lda];
+    for (int i = 0; i < m; i++) {
+      *a_to++ = *a_ij_pntr++;
+    }
+    a_to += (8 - m); // padding
+  }
+}
+void PackMatrixB(int k, double *b, int ldb, double *b_to, int n) {
+  int i;
+  for (i = 0; i < k; i++) {
+    double *b_i_pntr = &b[i * ldb];
+    for (int j = 0; j < n; j++) {
+      *b_to++ = *b_i_pntr++;
+    }
+    b_to += (8 - n); // padding
+  }
+}
+
+
+
+static constexpr uint32_t BLOCKSIZE = 64;
+
+static void do_block(const uint32_t n, const uint32_t si, const uint32_t sj, const uint32_t sk, const double *A, const double*B, double *C)
+{
+
+    for( uint32_t i = si; i < si + BLOCKSIZE; i += 8)
+    {
+        for( uint32_t j = sj; j < sj + BLOCKSIZE; ++j)
+        {
+            __m512d c= _mm512_load_pd(C + i   * 8 + j * n); //[ UNROLL];
+
+            for( uint32_t k = sk; k < sk + BLOCKSIZE; k++ )
+            {
+                __m512d bb = _mm512_broadcastsd_pd(_mm_load_sd(B + j * n + k));
+                    c = _mm512_fmadd_pd(_mm512_load_pd(A + n * k  * 8 + i), bb, c);
+            }
+
+                _mm512_store_pd(C + i   * 8 + j * n, c);
+        }
+    }
+}
+
+
+void dgemm_blocked(const uint32_t m, const uint32_t n,  const double* A, const double* B, double* C)
+{
+    for( uint32_t sj = 0; sj < m; sj += BLOCKSIZE )
+    {
+        for( uint32_t si = 0; si < n; si += BLOCKSIZE )
+        {
+            for( uint32_t sk = 0; sk < m; sk += BLOCKSIZE )
+            {
+                do_block(n, si, sj, sk, A, B, C);
+            }
+        }
+    }
 }
